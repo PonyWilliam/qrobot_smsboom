@@ -9,7 +9,6 @@ import asyncio
 from utils import default_header_user_agent
 
 from utils.models import API
-from utils.log import logger
 
 
 def reqAPI(api: API, client: Union[httpx.Client, httpx.AsyncClient]) -> httpx.Response:
@@ -37,14 +36,11 @@ def reqFuncByProxy(api: Union[API, str], phone: Union[tuple, str], proxy: dict) 
                 if isinstance(api, API):
                     api = api.handle_API(ph)
                     resp = reqAPI(api, client)
-                    logger.info(f"{api.desc}-{resp.text[:30]}")
                 else:
                     api = api.replace("[phone]", ph).replace(" ", "").replace('\n', '').replace('\r', '')
                     resp = client.get(url=api, headers=default_header_user_agent())
-                    logger.info(f"GETAPI接口-{resp.text[:30]}")
                 return True
             except httpx.HTTPError as why:
-                logger.error(f"请求失败{why}")
                 return False
 
 
@@ -62,14 +58,11 @@ def reqFunc(api: Union[API, str], phone: Union[tuple, str]) -> bool:
                 if isinstance(api, API):
                     api = api.handle_API(ph)
                     resp = reqAPI(api, client)
-                    logger.info(f"{api.desc}-{resp.text[:30]}")
                 else:
                     api = api.replace("[phone]", ph).replace(" ", "").replace('\n', '').replace('\r', '')
                     resp = client.get(url=api, headers=default_header_user_agent())
-                    logger.info(f"GETAPI接口-{resp.text[:30]}")
                 return True
             except httpx.HTTPError as why:
-                logger.error(f"请求失败{why}")
                 return False
 
 
@@ -106,22 +99,19 @@ async def asyncReqs(src: Union[API, str], phone: Union[tuple, str], semaphore):
                         r = await c.get(*s)
                     return r
                 except httpx.HTTPError as why:
-                    logger.error(f"异步请求失败{type(why)}")
-                    # logger.error(f"异步请求失败{why}")
+                    return
                     # import aiofiles
                     # async with aiofiles.open("error.txt","a",encoding="utf-8") as f:
                     #     await f.write(f"{str(s[0]) if str(s[0]) else str(src)}\n")
                 except TypeError:
-                    logger.error("类型错误")
+                    return
                 except Exception as wy:
-                    logger.exception(f"异步失败{wy}")
+                    return
 
 
 def callback(result):
     """异步回调函数"""
     log = result.result()
-    if log is not None:
-        logger.info(f"请求结果:{log.text[:30]}")
 
 
 
