@@ -11,7 +11,6 @@ import asyncio
 
 from utils.sql import Sql
 from utils.req import reqFunc, default_header_user_agent
-from utils.log import logger
 
 path = Path(__file__).parent.absolute().joinpath("debug", "api.db")
 
@@ -35,7 +34,6 @@ def read_url() -> str:
                 # print(f"{d}淘汰")
                 continue
             q.put(d)
-    logger.info(f"GETAPI接口总数:{q.qsize()}")
     return q
 
 
@@ -58,12 +56,9 @@ async def test2():
                 sql.update(i)
                 # logger.info("更新")
             except httpx.HTTPError as why:
-                if why is None:
-                    logger.exception("未知的失败")
-                logger.error(f"请求失败{type(why)}{why} {i}")
+                return
             except Exception as e:
-                logger.error("全局失败")
-                logger.exception(e)
+                return
 
 
 async def asMain():
@@ -86,7 +81,6 @@ def save_api():
     ]
     with open("GETAPI.json", mode="w", encoding="utf8") as j:
         json.dump(fp=j, obj=api_lst, ensure_ascii=False)
-    logger.success("写入到 GETAPI.json 成功!")
 
 
 def main():
